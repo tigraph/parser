@@ -5806,3 +5806,66 @@ func (s *testParserSuite) TestHighNotPrecedenceMode(c *C) {
 	restoreSQL = sb.String()
 	c.Assert(restoreSQL, Equals, "SELECT !1 BETWEEN -5 AND 5")
 }
+
+func (s *testParserSuite) TestTraverse(c *C) {
+	type verb struct {
+		direction ast.TraverseDirection
+		name      string
+	}
+	verbs := []verb{
+		{direction: ast.TraverseDirectionIn, name: "a"},
+		{direction: ast.TraverseDirectionOut, name: "b"},
+		{direction: ast.TraverseDirectionBoth, name: "c"},
+		{direction: ast.TraverseDirectionOut, name: "d"},
+		{direction: ast.TraverseDirectionIn, name: "e"},
+		{direction: ast.TraverseDirectionBoth, name: "g"},
+	}
+
+	allVerbs := [][]verb{
+		{
+			{direction: ast.TraverseDirectionIn, name: "a"},
+			{direction: ast.TraverseDirectionOut, name: "b"},
+		},
+		{{direction: ast.TraverseDirectionIn, name: "a"}},
+		{
+			{direction: ast.TraverseDirectionIn, name: "a"},
+			{direction: ast.TraverseDirectionIn, name: "b"},
+		},
+		{{direction: ast.TraverseDirectionBoth, name: "g"}},
+		{
+			{direction: ast.TraverseDirectionBoth, name: "g"},
+			{direction: ast.TraverseDirectionBoth, name: "g"},
+		},
+		verbs,
+		verbs,
+		verbs,
+		verbs,
+	}
+
+	sqls := []string{
+		"select * from t where x=10 traverse in(a).out(b)",
+		"select * from t where x=10 traverse in(a)",
+		"select * from t where x=10 traverse in(a).in(b)",
+		"select * from t where x=10 traverse both(f.g)",
+		"select * from t where x=10 traverse both(f.g).both(f.g)",
+		"select * from t where x=10 traverse in(a).out(b).both(c).out(d).in(e).both(f.g)",
+		"select * from t where x=10 traverse in(a).out(b).both(c).out(d).in(e).both(f.g) group by y",
+		"select * from t where x=10 traverse in(a).out(b).both(c).out(d).in(e).both(f.g) order by z",
+		"select * from t where x=10 traverse in(a).out(b).both(c).out(d).in(e).both(f.g) limit 1",
+	}
+
+	parser := parser.New()
+
+	for x, sql := range sqls {
+		verbs := allVerbs[x]
+		stmts, _, err := parser.Parse(sql, "", "")
+		c.Assert(err, IsNil, Commentf("sql: %s", sql))
+		stmt := stmts[0].(*ast.SelectStmt)
+		c.Assert(stmt.Text(), Equals, sql)
+		c.Assert(stmt.Traverse, NotNil)
+		for i, v := range stmt.Traverse.Verbs {
+			c.Assert(v.Direction, Equals, verbs[i].direction, Commentf("sql: %s", sql))
+			c.Assert(v.TableName.Name.String(), Equals, verbs[i].name, Commentf("sql: %s", sql))
+		}
+	}
+}
