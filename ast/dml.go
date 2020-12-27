@@ -977,6 +977,8 @@ type SelectStmt struct {
 	From *TableRefsClause
 	// Where is the where clause in select statement.
 	Where ExprNode
+	// Traverse is the graph traverse cluase in the select statement
+	Traverse *TraverseChain
 	// Fields is the select expression list.
 	Fields *FieldList
 	// GroupBy is the group by expression list.
