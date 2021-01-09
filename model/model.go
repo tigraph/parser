@@ -73,6 +73,14 @@ func (s SchemaState) String() string {
 	}
 }
 
+type TableType byte
+
+const (
+	TableTypeIsTable     TableType = 0
+	TableTypeIsGraphTag  TableType = 1
+	TableTypeIsGraphEdge TableType = 2
+)
+
 const (
 	// ColumnInfoVersion0 means the column info version is 0.
 	ColumnInfoVersion0 = uint64(0)
@@ -326,6 +334,8 @@ type TableInfo struct {
 	// IsColumnar means the table is column-oriented.
 	// It's true when the engine of the table is TiFlash only.
 	IsColumnar bool `json:"is_columnar"`
+
+	Type TableType `json:"type"`
 }
 
 // TableLockInfo provides meta data describing a table lock.
