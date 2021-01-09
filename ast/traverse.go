@@ -22,14 +22,14 @@ import (
 var _ Node = &TraverseChain{}
 
 type (
-	// TraverseDirection is used to represent the traverse direction
+	// TraverseAction is used to represent the traverse direction
 	// It is can be IN OUT BOTH
-	TraverseDirection byte
+	TraverseAction byte
 
 	// TraverseVerb is used to represent a traverse verb
 	TraverseVerb struct {
-		Direction TraverseDirection
-		TableName *TableName
+		Action TraverseAction
+		Names  []*TableName
 	}
 
 	// TraverseChain ise used to represent a group of action to traverse a graph
@@ -40,20 +40,23 @@ type (
 )
 
 const (
-	TraverseDirectionIn   TraverseDirection = 0
-	TraverseDirectionOut  TraverseDirection = 1
-	TraverseDirectionBoth TraverseDirection = 2
+	TraverseActionIn   TraverseAction = 0
+	TraverseActionOut  TraverseAction = 1
+	TraverseActionBoth TraverseAction = 2
+	TraverseActionTags TraverseAction = 3
 )
 
 // String implements the fmt.Stringer interface
-func (d TraverseDirection) String() string {
+func (d TraverseAction) String() string {
 	switch d {
-	case TraverseDirectionIn:
+	case TraverseActionIn:
 		return "IN"
-	case TraverseDirectionOut:
+	case TraverseActionOut:
 		return "OUT"
-	case TraverseDirectionBoth:
+	case TraverseActionBoth:
 		return "BOTH"
+	case TraverseActionTags:
+		return "TAGS"
 	default:
 		return fmt.Sprintf("UNKNOWN(%d)", d)
 	}
@@ -63,10 +66,15 @@ func (d TraverseDirection) String() string {
 func (t *TraverseChain) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("TRAVERSE ")
 	for i, v := range t.Verbs {
-		ctx.WritePlainf("%s(", v.Direction.String())
-		err := v.TableName.Restore(ctx)
-		if err != nil {
-			return err
+		ctx.WritePlainf("%s(", v.Action.String())
+		for j, n := range v.Names {
+			err := n.Restore(ctx)
+			if err != nil {
+				return err
+			}
+			if j != len(v.Names)-1 {
+				ctx.WritePlain(",")
+			}
 		}
 		ctx.WritePlain(")")
 		if i != len(t.Verbs)-1 {
