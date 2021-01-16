@@ -26,10 +26,15 @@ type (
 	// It is can be IN OUT BOTH
 	TraverseAction byte
 
+	TraverseTarget struct {
+		Name  *TableName
+		Where ExprNode
+	}
+
 	// TraverseVerb is used to represent a traverse verb
 	TraverseVerb struct {
-		Action TraverseAction
-		Names  []*TableName
+		Action  TraverseAction
+		Targets []*TraverseTarget
 	}
 
 	// TraverseChain ise used to represent a group of action to traverse a graph
@@ -67,12 +72,14 @@ func (t *TraverseChain) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("TRAVERSE ")
 	for i, v := range t.Verbs {
 		ctx.WritePlainf("%s(", v.Action.String())
-		for j, n := range v.Names {
-			err := n.Restore(ctx)
-			if err != nil {
+		for j, n := range v.Targets {
+			if err := n.Name.Restore(ctx); err != nil {
 				return err
 			}
-			if j != len(v.Names)-1 {
+			if err := n.Where.Restore(ctx); err != nil {
+				return err
+			}
+			if j != len(v.Targets)-1 {
 				ctx.WritePlain(",")
 			}
 		}

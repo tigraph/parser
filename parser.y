@@ -1161,6 +1161,7 @@ import (
 	TraverseChain                          "TRAVERSE chain"
 	TraverseVerb                           "TRAVERSE verb"
 	TraverseOptional                       "Optional TRAVERSE clause"
+	TraverseTargets                        "Traverse targets"
 	WhenClause                             "When clause"
 	WhenClauseList                         "When clause list"
 	WithReadLockOpt                        "With Read Lock opt"
@@ -11253,30 +11254,51 @@ TraverseChain:
 	}
 
 TraverseVerb:
-	"IN" '(' TableNameList ')'
+	"IN" '(' TraverseTargets ')'
 	{
-		$$ = &ast.TraverseVerb{Action: ast.TraverseActionIn, Names: $3.([]*ast.TableName)}
+		$$ = &ast.TraverseVerb{Action: ast.TraverseActionIn, Targets: $3.([]*ast.TraverseTarget)}
 	}
-|	"BOTH" '(' TableNameList ')'
+|	"BOTH" '(' TraverseTargets ')'
 	{
-		$$ = &ast.TraverseVerb{Action: ast.TraverseActionBoth, Names: $3.([]*ast.TableName)}
+		$$ = &ast.TraverseVerb{Action: ast.TraverseActionBoth, Targets: $3.([]*ast.TraverseTarget)}
 	}
-|	Identifier '(' TableNameList ')'
+|	Identifier '(' TraverseTargets ')'
 	{
-		names := $3.([]*ast.TableName)
+		targets := $3.([]*ast.TraverseTarget)
 		switch strings.ToUpper($1) {
 		case "IN":
-			$$ = &ast.TraverseVerb{Action: ast.TraverseActionIn, Names: names}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionIn, Targets: targets}
 		case "OUT":
-			$$ = &ast.TraverseVerb{Action: ast.TraverseActionOut, Names: names}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionOut, Targets: targets}
 		case "BOTH":
-			$$ = &ast.TraverseVerb{Action: ast.TraverseActionBoth, Names: names}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionBoth, Targets: targets}
 		case "TAG":
-			$$ = &ast.TraverseVerb{Action: ast.TraverseActionTags, Names: names}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionTags, Targets: targets}
 		default:
 			// Invalid traverse verb
-			$$ = &ast.TraverseVerb{Action: ast.TraverseAction(0xff), Names: names}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseAction(0xff), Targets: targets}
 		}
+	}
+
+TraverseTargets:
+	TableName WhereClauseOptional
+	{
+		where, _ := $2.(ast.ExprNode)
+		target := &ast.TraverseTarget{
+			Name:  $1.(*ast.TableName),
+			Where: where,
+		}
+		tbl := []*ast.TraverseTarget{target}
+		$$ = tbl
+	}
+|	TraverseTargets ',' TableName WhereClauseOptional
+	{
+		where, _ := $4.(ast.ExprNode)
+		target := &ast.TraverseTarget{
+			Name:  $3.(*ast.TableName),
+			Where: where,
+		}
+		$$ = append($1.([]*ast.TraverseTarget), target)
 	}
 
 /************************************************************************************

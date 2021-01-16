@@ -5829,6 +5829,7 @@ func (s *testParserSuite) TestTraverse(c *C) {
 	type verb struct {
 		direction ast.TraverseAction
 		names     []string
+		where     bool
 	}
 	verbs := []verb{
 		{direction: ast.TraverseActionIn, names: []string{"a"}},
@@ -5844,7 +5845,7 @@ func (s *testParserSuite) TestTraverse(c *C) {
 			{direction: ast.TraverseActionIn, names: []string{"a"}},
 			{direction: ast.TraverseActionOut, names: []string{"b"}},
 		},
-		{{direction: ast.TraverseActionIn, names: []string{"a"}}},
+		{{direction: ast.TraverseActionIn, where: true, names: []string{"a"}}},
 		{
 			{direction: ast.TraverseActionIn, names: []string{"a"}},
 			{direction: ast.TraverseActionIn, names: []string{"b"}},
@@ -5867,7 +5868,7 @@ func (s *testParserSuite) TestTraverse(c *C) {
 
 	sqls := []string{
 		"select * from t where x=10 traverse in(a).out(b)",
-		"select * from t where x=10 traverse in(a)",
+		"select * from t where x=10 traverse in(a where x='y')",
 		"select * from t where x=10 traverse in(a).in(b)",
 		"select * from t where x=10 traverse both(f.g)",
 		"select * from t where x=10 traverse both(f.g).both(f.g)",
@@ -5890,8 +5891,11 @@ func (s *testParserSuite) TestTraverse(c *C) {
 		for i, v := range stmt.Traverse.Verbs {
 			c.Assert(v.Action, Equals, verbs[i].direction, Commentf("sql: %s", sql))
 			var names []string
-			for _, n := range v.Names {
-				names = append(names, n.Name.String())
+			for _, n := range v.Targets {
+				names = append(names, n.Name.Name.String())
+				if verbs[i].where {
+					c.Assert(n.Where, NotNil)
+				}
 			}
 			c.Assert(names, DeepEquals, verbs[i].names, Commentf("sql: %s", sql))
 		}
