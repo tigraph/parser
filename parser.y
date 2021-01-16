@@ -11253,26 +11253,29 @@ TraverseChain:
 	}
 
 TraverseVerb:
-	"IN" '(' TableName ')'
+	"IN" '(' TableNameList ')'
 	{
-		$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionIn, TableName: $3.(*ast.TableName)}
+		$$ = &ast.TraverseVerb{Action: ast.TraverseActionIn, Names: $3.([]*ast.TableName)}
 	}
-|	"BOTH" '(' TableName ')'
+|	"BOTH" '(' TableNameList ')'
 	{
-		$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionBoth, TableName: $3.(*ast.TableName)}
+		$$ = &ast.TraverseVerb{Action: ast.TraverseActionBoth, Names: $3.([]*ast.TableName)}
 	}
-|	Identifier '(' TableName ')'
+|	Identifier '(' TableNameList ')'
 	{
+		names := $3.([]*ast.TableName)
 		switch strings.ToUpper($1) {
 		case "IN":
-			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionIn, TableName: $3.(*ast.TableName)}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionIn, Names: names}
 		case "OUT":
-			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionOut, TableName: $3.(*ast.TableName)}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionOut, Names: names}
 		case "BOTH":
-			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionBoth, TableName: $3.(*ast.TableName)}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionBoth, Names: names}
+		case "TAG":
+			$$ = &ast.TraverseVerb{Action: ast.TraverseActionTags, Names: names}
 		default:
 			// Invalid traverse verb
-			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirection(0xff), TableName: $3.(*ast.TableName)}
+			$$ = &ast.TraverseVerb{Action: ast.TraverseAction(0xff), Names: names}
 		}
 	}
 
