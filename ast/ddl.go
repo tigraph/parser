@@ -926,6 +926,7 @@ type CreateTableStmt struct {
 
 	IfNotExists bool
 	IsTemporary bool
+	Type        model.TableType
 	Table       *TableName
 	ReferTable  *TableName
 	Cols        []*ColumnDef
@@ -938,10 +939,18 @@ type CreateTableStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateTableStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.WriteKeyWord("CREATE ")
 	if n.IsTemporary {
-		ctx.WriteKeyWord("CREATE TEMPORARY TABLE ")
-	} else {
-		ctx.WriteKeyWord("CREATE TABLE ")
+		ctx.WriteKeyWord("TEMPORARY ")
+	}
+	switch n.Type {
+	case model.TableTypeIsTable:
+		ctx.WriteKeyWord("TABLE ")
+	case model.TableTypeIsGraphTag:
+		ctx.WriteKeyWord("TAG ")
+	case model.TableTypeIsGraphEdge:
+		ctx.WriteKeyWord("EDGE ")
+
 	}
 	if n.IfNotExists {
 		ctx.WriteKeyWord("IF NOT EXISTS ")

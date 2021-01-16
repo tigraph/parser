@@ -620,6 +620,8 @@ var tokenMap = map[string]int{
 	"SOURCE":                   source,
 	"SPATIAL":                  spatial,
 	"SPLIT":                    split,
+	"TAG":                      tag,
+	"EDGE":                     edge,
 	"SQL_BIG_RESULT":           sqlBigResult,
 	"SQL_BUFFER_RESULT":        sqlBufferResult,
 	"SQL_CACHE":                sqlCache,

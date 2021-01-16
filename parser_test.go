@@ -2157,6 +2157,11 @@ func (s *testParserSuite) TestDDL(c *C) {
 		{"CREATE TABLE foo (a.b, b);", false, ""},
 		{"CREATE TABLE foo (a, b.c);", false, ""},
 		{"CREATE TABLE (name CHAR(50) BINARY)", false, ""},
+		// for create graph tag/edge
+		{"CREATE TAG people (a varchar(50), b int);", true, "CREATE TAG `people` (`a` VARCHAR(50),`b` INT)"},
+		{"CREATE EDGE friend (`from` bigint, `to` bigint);", true, "CREATE EDGE `friend` (`from` BIGINT,`to` BIGINT)"},
+		{"CREATE EDGE friend (`from` bigint, `to` bigint, description varchar(100));", true, "CREATE EDGE `friend` (`from` BIGINT,`to` BIGINT,`description` VARCHAR(100))"},
+
 		// for create temporary table
 		{"CREATE TEMPORARY TABLE t (a varchar(50), b int);", true, "CREATE TEMPORARY TABLE `t` (`a` VARCHAR(50),`b` INT)"},
 		{"CREATE TEMPORARY TABLE t LIKE t1", true, "CREATE TEMPORARY TABLE `t` LIKE `t1`"},
