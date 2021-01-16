@@ -276,6 +276,7 @@ import (
 	virtual           "VIRTUAL"
 	when              "WHEN"
 	where             "WHERE"
+	traverse          "TRAVERSE"
 	write             "WRITE"
 	window            "WINDOW"
 	with              "WITH"
@@ -1156,6 +1157,10 @@ import (
 	ViewSQLSecurity                        "view sql security"
 	WhereClause                            "WHERE clause"
 	WhereClauseOptional                    "Optional WHERE clause"
+	TraverseClause                         "TRAVERSE clause"
+	TraverseChain                          "TRAVERSE chain"
+	TraverseVerb                           "TRAVERSE verb"
+	TraverseOptional                       "Optional TRAVERSE clause"
 	WhenClause                             "When clause"
 	WhenClauseList                         "When clause list"
 	WithReadLockOpt                        "With Read Lock opt"
@@ -7527,26 +7532,29 @@ SelectStmtFromDualTable:
 	}
 
 SelectStmtFromTable:
-	SelectStmtBasic "FROM" TableRefsClause WhereClauseOptional SelectStmtGroup HavingClause WindowClauseOptional
+	SelectStmtBasic "FROM" TableRefsClause WhereClauseOptional TraverseOptional SelectStmtGroup HavingClause WindowClauseOptional
 	{
 		st := $1.(*ast.SelectStmt)
 		st.From = $3.(*ast.TableRefsClause)
 		lastField := st.Fields.Fields[len(st.Fields.Fields)-1]
 		if lastField.Expr != nil && lastField.AsName.O == "" {
-			lastEnd := parser.endOffset(&yyS[yypt-5])
+			lastEnd := parser.endOffset(&yyS[yypt-6])
 			lastField.SetText(parser.src[lastField.Offset:lastEnd])
 		}
 		if $4 != nil {
 			st.Where = $4.(ast.ExprNode)
 		}
 		if $5 != nil {
-			st.GroupBy = $5.(*ast.GroupByClause)
+			st.Traverse = $5.(*ast.TraverseChain)
 		}
 		if $6 != nil {
-			st.Having = $6.(*ast.HavingClause)
+			st.GroupBy = $6.(*ast.GroupByClause)
 		}
 		if $7 != nil {
-			st.WindowSpecs = ($7.([]ast.WindowSpec))
+			st.Having = $7.(*ast.HavingClause)
+		}
+		if $8 != nil {
+			st.WindowSpecs = ($8.([]ast.WindowSpec))
 		}
 		$$ = st
 	}
@@ -11221,6 +11229,52 @@ CommaOpt:
 	{}
 |	','
 	{}
+
+TraverseClause:
+	"TRAVERSE" TraverseChain
+	{
+		$$ = &ast.TraverseChain{Verbs: $2.([]*ast.TraverseVerb)}
+	}
+
+TraverseOptional:
+	{
+		$$ = nil
+	}
+|	TraverseClause
+
+TraverseChain:
+	TraverseVerb
+	{
+		$$ = []*ast.TraverseVerb{$1.(*ast.TraverseVerb)}
+	}
+|	TraverseChain '.' TraverseVerb
+	{
+		$$ = append($1.([]*ast.TraverseVerb), $3.(*ast.TraverseVerb))
+	}
+
+TraverseVerb:
+	"IN" '(' TableName ')'
+	{
+		$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionIn, TableName: $3.(*ast.TableName)}
+	}
+|	"BOTH" '(' TableName ')'
+	{
+		$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionBoth, TableName: $3.(*ast.TableName)}
+	}
+|	Identifier '(' TableName ')'
+	{
+		switch strings.ToUpper($1) {
+		case "IN":
+			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionIn, TableName: $3.(*ast.TableName)}
+		case "OUT":
+			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionOut, TableName: $3.(*ast.TableName)}
+		case "BOTH":
+			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirectionBoth, TableName: $3.(*ast.TableName)}
+		default:
+			// Invalid traverse verb
+			$$ = &ast.TraverseVerb{Direction: ast.TraverseDirection(0xff), TableName: $3.(*ast.TableName)}
+		}
+	}
 
 /************************************************************************************
  *  Account Management Statements

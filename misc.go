@@ -756,6 +756,7 @@ var tokenMap = map[string]int{
 	"WEIGHT_STRING":            weightString,
 	"WHEN":                     when,
 	"WHERE":                    where,
+	"TRAVERSE":                 traverse,
 	"WIDTH":                    width,
 	"WITH":                     with,
 	"WITHOUT":                  without,
